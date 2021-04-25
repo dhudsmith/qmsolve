@@ -37,7 +37,7 @@ def main():
     rescaling_factor = 1
     fps = 30
     times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 2, 7 * fps)])
-    batch_size = 360
+    batch_size = len(times)
     grid_video = 720
     video_size = (grid_video, grid_video)
     fourcc_str = 'FFV1'

@@ -4,10 +4,13 @@ from queue import Queue
 import time
 import numpy as np
 from skimage.color import hsv2rgb
-from hamiltonian import DiscreteSpace
+from hamiltonian import DiscreteSpace, Propagator
 
 
 def hsv_rep_color(probs, phis):
+    """
+    Map probability densities and phases onto color using HSV color representation.
+    """
     h = (phis + np.pi) / 2 / np.pi
     s = np.ones_like(phis)
     v = probs
@@ -17,10 +20,25 @@ def hsv_rep_color(probs, phis):
     return hsv2rgb(hsv_image)
 
 
-def render_frames(frame_queue, times, batch_size, prop,
+def render_frames(frame_queue, times, batch_size,
+                  prop: Propagator,
                   space_vid: DiscreteSpace = None,
                   rescaling_factor=1.,
                   mask_potential=True):
+    """
+    Simulate dynamics and render frames into the provided frame queue.
+    :param frame_queue: A queue to hold simulation results.
+    :param times: The times for which the wave function is computed.
+    :param batch_size: The number of frames simultaneously processed. Larger is
+        faster but takes more memory.
+    :param prop: The propagator object used to solve the time-dependent
+        Schrodinger equation
+    :param space_vid: the space object used to control the video resolution
+    :param rescaling_factor: Scales the probabilities to avoid clipping.
+    :param mask_potential: Whether or not to use the potential to mask regions of the
+        rendered frames. Useful for scattering off of hard objects.
+    :return:
+    """
 
     # Prepare the discrete space used for video rendering
     if space_vid is None:
