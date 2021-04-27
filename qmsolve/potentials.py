@@ -7,7 +7,7 @@ def hard_disk(x, y, r=1.0, center=(0, 0), scale=1e5):
     A circular barrier
     """
     xc, yc = center
-    v_grid = np.zeros((len(x), len(y)))
+    v_grid = np.zeros((len(y), len(x)))
     barrier_cond = np.add.outer((y - yc) ** 2, (x - xc) ** 2) <= r ** 2
     v_grid[barrier_cond] = scale
 
@@ -19,6 +19,17 @@ def multiple_hard_disks(x, y, rs: List[float], centers: List[Tuple[float, float]
     Multiple circular barriers
     """
     v = sum(hard_disk(x, y, r, c) for r, c in zip(rs, centers))
+    return v
+
+
+def gravity_and_floor(x, y, floor, g=1, scale=1e5):
+    """
+    A hard wall at the bottom of the view and a linear downward potential.
+    Note: y increases in the downward direction.
+    """
+    v = np.zeros((len(y), len(x)))
+    v += g*(y[:,None]-floor)**2
+    v[y>floor] = scale
     return v
 
 

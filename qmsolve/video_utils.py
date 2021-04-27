@@ -58,9 +58,9 @@ def render_frames(frame_queue, times, batch_size,
         psit = prop.evolve(batch)
 
         # prepare the probabilities and phases
-        probt = (np.abs(psit)**2)
+        probt = (p:=np.abs(psit)**2)/p.max(axis=(1,2), keepdims=True)
         norm_factor = probt.max()*rescaling_factor if norm_factor is None else norm_factor
-        probt /= norm_factor
+        #probt /= norm_factor
         if (p_clip:=np.max(probt))>1:
             print(f"Warning: clipping detect with value {p_clip} > 1. Consider rescaling.")
         phit = np.angle(psit)

@@ -1,7 +1,8 @@
 from functools import partial
+from queue import Queue
+
 import numpy as np
 import cv2
-from queue import Queue
 
 from hamiltonian import DiscreteSpace, SingleParticle, Solver, Propagator
 from video_utils import VideoWriterStream, render_frames
@@ -15,33 +16,36 @@ def main():
     # ------------------------
 
     # potential
-    rs = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    centers = [(0, -3), (0, -2), (0, -1.), (0, 0), (0, 1.), (0, 2), (0, 3)]
+    num_dots = 8
+    rs = [0.15]*num_dots
+    cys = np.linspace(-5,5, num_dots)
+    centers = [(0, cy) for cy in cys]
     potential = partial(multiple_hard_disks, rs=rs, centers=centers)
 
     # initial state
     p = (6, 0)
     xy0 = (-4, 0)
-    init_state = partial(coherent_state_2d, p=p, xy0=xy0)
+    w = (0.5, 0.5)
+    init_state = partial(coherent_state_2d, p=p, xy0=xy0, w=w)
 
     # system and solver
     dim = 2  # spacial dimension
-    support = (-5, 5)  # support region of mask_func
+    support = (-6, 6)  # support region of mask_func
     grid = 300  # number of grid points along one dimension. Assumed square.
     dtype = np.float64  # datatype used for internal processing
-    num_states = 700  # how many eigenstates to consider for time evolution
+    num_states = 800  # how many eigenstates to consider for time evolution
     method = 'eigsh'  # eigensolver method. One of 'eigsh' or 'lobpcg'
 
     # video arguments
-    name = 'scattering_circular_barrier'
+    name = 'scattering_circular_barrier_norm2'
     rescaling_factor = 1
     fps = 30
-    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 2, 7 * fps)])
-    batch_size = len(times)
-    grid_video = 720
+    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 2, 10 * fps)])
+    batch_size = len(times)//2
+    grid_video = 1080
     video_size = (grid_video, grid_video)
-    fourcc_str = 'FFV1'
-    extension = 'avi'
+    fourcc_str = 'mp4v'
+    extension = 'mp4'
     video_file = f"../assets/{name}.{extension}"
 
     # ------------------------
