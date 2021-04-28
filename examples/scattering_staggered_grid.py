@@ -16,19 +16,21 @@ def main():
     # ------------------------
 
     # potential
-    num_dots_per_col = 10
-    num_cols = 5
-    rs = [0.22]*(num_dots_per_col * num_cols)
-    ys = np.linspace(-8, 8, num_dots_per_col)
-    step = ys[1]-ys[0]
+    num_dots_per_col = 20
+    num_cols = 3
+    dot_radius = 0.15
+    step = 3*dot_radius
+    ys = np.arange(-7,7, step)
     shift = step/np.sqrt(2)
-    centers = [(0+i*shift, y+i%2*step/2) for i in range(num_cols) for y in ys]
+    centers = [(3+i*step, y+i%2*step/2) for i in range(num_cols) for y in ys]
+    rs = [dot_radius] * (len(centers))
     potential = partial(multiple_hard_disks, rs=rs, centers=centers)
 
     # initial state
-    p = (6, 0)
+    lam = 2.8*dot_radius
+    p = (1/lam, 0)
     xy0 = (-4, 0)
-    w = (0.5, 0.5)
+    w = (1, 1)
     init_state = partial(coherent_state_2d, p=p, xy0=xy0, w=w)
 
     # system and solver
@@ -43,8 +45,8 @@ def main():
     name = 'scattering_staggered_grid'
     rescaling_factor = 1
     fps = 30
-    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 2.5, 20 * fps)])
-    batch_size = 2*fps
+    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 8, 12 * fps)])
+    batch_size = fps
     grid_video = 1080
     video_size = (grid_video, grid_video)
     fourcc_str = 'mp4v'
