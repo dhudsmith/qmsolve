@@ -76,7 +76,6 @@ class SingleParticle(Hamiltonian):
               for i in range(self.space.dim)]
 
 
-
         if self.space.dim == 1:
             return Ts[0]
         elif self.space.dim == 2:
@@ -128,32 +127,6 @@ class Solver:
         return eig, vec.T
 
 
-class Propagator:
-    def __init__(self, hamiltonian: Hamiltonian,
-                 init_state: Callable[[np.ndarray], np.ndarray],
-                 solver: Solver, k: int):
-        self.hamiltonian = hamiltonian
-        self.solver = solver
-        self.k = k
-        self.init_state = init_state
-        self.eigs, self.vecs = self.solver.eigsys(self.hamiltonian, self.k)
-
-        # compute the initial state function on the discrete grid
-        self.init_state_grid = self.init_state(*self.hamiltonian.space.grid_points)
-        self.init_state_grid = self.hamiltonian.space.mesh_to_vec(self.init_state_grid)
-
-    def evolve(self, times: np.ndarray):
-
-        # compute the time-dependent wave function
-        coeffs = self.vecs @ self.init_state_grid.T
-        phases = np.exp(-1.0j * np.outer(times, self.eigs))
-        coeffs_of_t = phases * coeffs.T
-        psi_of_t = coeffs_of_t @ self.vecs
-
-        # re-ravel the state vector to a mesh
-        psi_of_t = self.hamiltonian.space.vec_to_mesh(psi_of_t)
-
-        return psi_of_t
 
 
 if __name__ == '__main__':

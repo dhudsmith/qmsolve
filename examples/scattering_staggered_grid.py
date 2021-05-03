@@ -4,7 +4,8 @@ from queue import Queue
 import numpy as np
 import cv2
 
-from hamiltonian import DiscreteSpace, SingleParticle, Solver, Propagator
+from hamiltonian import DiscreteSpace, SingleParticle, Solver
+from time_evolve import DiagonalizationPropagator as DiagProp
 from video_utils import VideoWriterStream, render_frames
 from potentials import multiple_hard_disks
 from states import coherent_state_2d
@@ -16,19 +17,17 @@ def main():
     # ------------------------
 
     # potential
-    num_dots_per_col = 20
     num_cols = 3
-    dot_radius = 0.15
+    dot_radius = 1
     step = 3*dot_radius
     ys = np.arange(-7,7, step)
-    shift = step/np.sqrt(2)
     centers = [(3+i*step, y+i%2*step/2) for i in range(num_cols) for y in ys]
     rs = [dot_radius] * (len(centers))
     potential = partial(multiple_hard_disks, rs=rs, centers=centers)
 
     # initial state
-    lam = 2.8*dot_radius
-    p = (1/lam, 0)
+    lam = dot_radius/2.8
+    p = (2*np.pi/lam, 0)
     xy0 = (-4, 0)
     w = (1, 1)
     init_state = partial(coherent_state_2d, p=p, xy0=xy0, w=w)
@@ -36,9 +35,9 @@ def main():
     # system and solver
     dim = 2  # spacial dimension
     support = (-6, 6)  # support region of mask_func
-    grid = 200  # number of grid points along one dimension. Assumed square.
+    grid = 60  # number of grid points along one dimension. Assumed square.
     dtype = np.float64  # datatype used for internal processing
-    num_states = 900  # how many eigenstates to consider for time evolution
+    num_states = 500  # how many eigenstates to consider for time evolution
     method = 'eigsh'  # eigensolver method. One of 'eigsh' or 'lobpcg'
 
     # video arguments
@@ -61,7 +60,7 @@ def main():
     space_vid = DiscreteSpace(dim, support, grid_video, dtype)
     ham = SingleParticle(space, potential)
     solver = Solver(method=method)
-    prop = Propagator(ham, init_state, solver, num_states)
+    prop = DiagProp(ham, init_state, solver, num_states)
 
     # ------------------------
     # Run simulation and create outputs

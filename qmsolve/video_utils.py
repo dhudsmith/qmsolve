@@ -4,7 +4,8 @@ from queue import Queue
 import time
 import numpy as np
 from skimage.color import hsv2rgb
-from hamiltonian import DiscreteSpace, Propagator
+from hamiltonian import DiscreteSpace
+from time_evolve import Propagator
 
 
 def hsv_rep_color(probs, phis):
@@ -24,7 +25,8 @@ def render_frames(frame_queue, times, batch_size,
                   prop: Propagator,
                   space_vid: DiscreteSpace = None,
                   rescaling_factor=1.,
-                  mask_potential=True):
+                  mask_potential=True,
+                  fps=None):
     """
     Simulate dynamics and render frames into the provided frame queue.
     :param frame_queue: A queue to hold simulation results.
@@ -39,6 +41,12 @@ def render_frames(frame_queue, times, batch_size,
         rendered frames. Useful for scattering off of hard objects.
     :return:
     """
+
+    if fps is None:
+        write_interval = 1
+    else:
+        observed_fps = len(times)/(times[-1] - times[0])
+        write_interval = int(observed_fps//fps)
 
     # Prepare the discrete space used for video rendering
     if space_vid is None:
@@ -66,7 +74,7 @@ def render_frames(frame_queue, times, batch_size,
         phit = np.angle(psit)
 
         # Use generator to feed frames into frame queue
-        frames = gen_colorized_frames(probt, phit, mask_grid=mask, size=video_size)
+        frames = gen_colorized_frames(probt, phit, mask_grid=mask, size=video_size, write_interval=write_interval)
         for j, f in enumerate(frames):
             frame_queue.put(f)
 
@@ -77,8 +85,8 @@ def render_frames(frame_queue, times, batch_size,
                 raise Exception("Invalid frame!")
 
 
-def gen_colorized_frames(probs, phis, mask_grid=None, size=None):
-    for i in range(len(probs)):
+def gen_colorized_frames(probs, phis, mask_grid=None, size=None, write_interval=None):
+    for i in range(0,len(probs), write_interval):
         frame = hsv_rep_color(probs[i], phis[i])
         frame = (255 * frame).astype(np.uint8)
         frame = frame[..., ::-1]  # bgr channel ordering for opencv

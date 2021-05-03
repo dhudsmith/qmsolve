@@ -4,8 +4,8 @@ from queue import Queue
 import numpy as np
 import cv2
 
-from hamiltonian import DiscreteSpace, SingleParticle, Solver
-from time_evolve import DiagonalizationPropagator as DiagProp
+from hamiltonian import DiscreteSpace, SingleParticle
+from time_evolve import VisscherPropagator as VissProp
 from video_utils import VideoWriterStream, render_frames
 from potentials import multiple_hard_disks
 from states import coherent_state_2d
@@ -18,13 +18,14 @@ def main():
 
     # potential
     num_dots = 4
-    rs = [1]*num_dots
-    cys = np.linspace(-5,5, num_dots)
-    centers = [(0, cy) for cy in cys]
-    potential = partial(multiple_hard_disks, rs=rs, centers=centers)
+    rs = [0.6666]*num_dots
+    cys = np.linspace(-4,4, num_dots)
+    centers = [(2, cy) for cy in cys]
+    scales = [30]*num_dots
+    potential = partial(multiple_hard_disks, rs=rs, centers=centers, scales=scales)
 
     # initial state
-    p = (6, 0)
+    p = (2, 0)
     xy0 = (-4, 0)
     w = (0.5, 0.5)
     init_state = partial(coherent_state_2d, p=p, xy0=xy0, w=w)
@@ -32,18 +33,17 @@ def main():
     # system and solver
     dim = 2  # spacial dimension
     support = (-6, 6)  # support region of mask_func
-    grid = 60  # number of grid points along one dimension. Assumed square.
-    dtype = np.float64  # datatype used for internal processing
-    num_states = 400  # how many eigenstates to consider for time evolution
-    method = 'eigsh'  # eigensolver method. One of 'eigsh' or 'lobpcg'
+    grid = 50  # number of grid points along one dimension. Assumed square.
+    dtype = np.float32  # datatype used for internal processing
+    dt = 0.0003
+    times = np.arange(0, 8, dt)
 
     # video arguments
-    name = 'scattering_circular_barrier_norm2'
+    name = 'visscher_prop'
     rescaling_factor = 1
     fps = 30
-    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 2, 10 * fps)])
-    batch_size = len(times)//2
-    grid_video = 1080
+    batch_size = len(times)
+    grid_video = 480
     video_size = (grid_video, grid_video)
     fourcc_str = 'mp4v'
     extension = 'mp4'
@@ -56,8 +56,7 @@ def main():
     space = DiscreteSpace(dim, support, grid, dtype)
     space_vid = DiscreteSpace(dim, support, grid_video, dtype)
     ham = SingleParticle(space, potential)
-    solver = Solver(method=method)
-    prop = DiagProp(ham, init_state, solver, num_states)
+    prop = VissProp(ham, init_state)
 
     # ------------------------
     # Run simulation and create outputs
@@ -75,7 +74,7 @@ def main():
     thread = vws.start()
 
     # render the frames to the write_queue
-    render_frames(write_queue, times, batch_size, prop, space_vid, rescaling_factor)
+    render_frames(write_queue, times, batch_size, prop, space_vid, rescaling_factor, fps=fps)
 
     # shutdown the thread
     vws.stop()

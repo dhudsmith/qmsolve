@@ -14,11 +14,14 @@ def hard_disk(x, y, r=1.0, center=(0, 0), scale=1e5):
     return v_grid
 
 
-def multiple_hard_disks(x, y, rs: List[float], centers: List[Tuple[float, float]]):
+def multiple_hard_disks(x, y, rs: List[float], centers: List[Tuple[float, float]], scales: List[float] = None):
     """
     Multiple circular barriers
     """
-    v = sum(hard_disk(x, y, r, c) for r, c in zip(rs, centers))
+    if scales is None:
+        scales = [1e-5]*len(rs)
+
+    v = sum(hard_disk(x, y, r, c, s) for r, c, s in zip(rs, centers, scales))
     return v
 
 
