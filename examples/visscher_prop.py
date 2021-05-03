@@ -17,8 +17,8 @@ def main():
     # ------------------------
 
     # potential
-    num_dots = 4
-    rs = [0.6666]*num_dots
+    num_dots = 5
+    rs = [0.5]*num_dots
     cys = np.linspace(-4,4, num_dots)
     centers = [(2, cy) for cy in cys]
     scales = [30]*num_dots
@@ -33,10 +33,10 @@ def main():
     # system and solver
     dim = 2  # spacial dimension
     support = (-6, 6)  # support region of mask_func
-    grid = 50  # number of grid points along one dimension. Assumed square.
+    grid = 200  # number of grid points along one dimension. Assumed square.
     dtype = np.float32  # datatype used for internal processing
-    dt = 0.0003
-    times = np.arange(0, 8, dt)
+    dt = 0.001
+    times = np.arange(0, 4, dt)
 
     # video arguments
     name = 'visscher_prop'
