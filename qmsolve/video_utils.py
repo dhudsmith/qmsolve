@@ -75,14 +75,13 @@ def prep_frame(psi, mask_grid=None, size=None):
         print(f"Warning: clipping detect with value {p_clip} > 1. Consider rescaling.")
     phi = np.angle(psi)
 
-    # optionally resize
-    if size:
-        prob = cv2.resize(prob, size, interpolation=cv2.INTER_LANCZOS4)
-        phi = cv2.resize(phi, size, interpolation=cv2.INTER_LANCZOS4)
-
     frame = hsv_rep_color(prob, phi)
     frame = (255 * frame).astype(np.uint8)
     frame = frame[..., ::-1]  # bgr channel ordering for opencv
+
+    # optionally resize
+    if size:
+        frame = cv2.resize(frame, size, interpolation=cv2.INTER_LANCZOS4)
 
     # optionally mask the mask_func
     if mask_grid is not None:
