@@ -19,7 +19,7 @@ def multiple_hard_disks(x, y, rs: List[float], centers: List[Tuple[float, float]
     Multiple circular barriers
     """
     if scales is None:
-        scales = [1e-5]*len(rs)
+        scales = [100]*len(rs)
 
     v = sum(hard_disk(x, y, r, c, s) for r, c, s in zip(rs, centers, scales))
     return v

@@ -17,33 +17,35 @@ def main():
     # ------------------------
 
     # potential
-    num_dots = 5
-    rs = [0.5]*num_dots
-    cys = np.linspace(-4,4, num_dots)
-    centers = [(2, cy) for cy in cys]
-    scales = [30]*num_dots
-    potential = partial(multiple_hard_disks, rs=rs, centers=centers, scales=scales)
+    num_cols = 5
+    dot_radius = 0.20
+    step = 3 * dot_radius
+    ys = np.arange(-7, 7, step)
+    centers = [(3 + i * step, y + i % 2 * step / 2) for i in range(num_cols) for y in ys]
+    rs = [dot_radius] * (len(centers))
+    potential = partial(multiple_hard_disks, rs=rs, centers=centers)
 
     # initial state
-    p = (2, 0)
+    lam = dot_radius
+    p = (1.6/lam, 0)
     xy0 = (-4, 0)
-    w = (0.5, 0.5)
+    w = (1, 1)
     init_state = partial(coherent_state_2d, p=p, xy0=xy0, w=w)
 
     # system and solver
     dim = 2  # spacial dimension
     support = (-6, 6)  # support region of mask_func
-    grid = 200  # number of grid points along one dimension. Assumed square.
+    grid = 300 # number of grid points along one dimension. Assumed square.
     dtype = np.float32  # datatype used for internal processing
-    dt = 0.001
-    times = np.arange(0, 4, dt)
+    dt = 0.0001
+    sys_duration = 2
 
     # video arguments
     name = 'visscher_prop'
-    rescaling_factor = 1
+    vid_duration = 6
     fps = 30
-    batch_size = len(times)
-    grid_video = 480
+    sample_interval = int(sys_duration / vid_duration / dt / fps)
+    grid_video = 720
     video_size = (grid_video, grid_video)
     fourcc_str = 'mp4v'
     extension = 'mp4'
@@ -57,6 +59,9 @@ def main():
     space_vid = DiscreteSpace(dim, support, grid_video, dtype)
     ham = SingleParticle(space, potential)
     prop = VissProp(ham, init_state)
+
+    psit_gen = prop.evolve(dt, sample_interval)
+    mask_grid = ham.potential(*space_vid.grid_points)
 
     # ------------------------
     # Run simulation and create outputs
@@ -74,7 +79,7 @@ def main():
     thread = vws.start()
 
     # render the frames to the write_queue
-    render_frames(write_queue, times, batch_size, prop, space_vid, rescaling_factor, fps=fps)
+    render_frames(write_queue, psit_gen, vid_duration, fps, space_vid, mask_grid=mask_grid)
 
     # shutdown the thread
     vws.stop()

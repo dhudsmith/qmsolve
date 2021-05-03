@@ -6,6 +6,7 @@ import numpy as np
 from skimage.color import hsv2rgb
 from hamiltonian import DiscreteSpace
 from time_evolve import Propagator
+from typing import Generator
 
 
 def hsv_rep_color(probs, phis):
@@ -21,12 +22,13 @@ def hsv_rep_color(probs, phis):
     return hsv2rgb(hsv_image)
 
 
-def render_frames(frame_queue, times, batch_size,
-                  prop: Propagator,
-                  space_vid: DiscreteSpace = None,
-                  rescaling_factor=1.,
-                  mask_potential=True,
-                  fps=None):
+def render_frames(frame_queue,
+                  psit_gen: Generator[np.ndarray, None, None],
+                  duration,
+                  fps,
+                  space_vid,
+                  mask_grid=None,
+                  progress_interval=None):
     """
     Simulate dynamics and render frames into the provided frame queue.
     :param frame_queue: A queue to hold simulation results.
@@ -42,64 +44,56 @@ def render_frames(frame_queue, times, batch_size,
     :return:
     """
 
-    if fps is None:
-        write_interval = 1
-    else:
-        observed_fps = len(times)/(times[-1] - times[0])
-        write_interval = int(observed_fps//fps)
+    if not progress_interval:
+        progress_interval = int(fps//2)
 
     # Prepare the discrete space used for video rendering
-    if space_vid is None:
-        space_vid = prop.hamiltonian.space
     video_size = tuple(space_vid.grid)
-    print(video_size)
 
     # Function that is used to identify regions to be masked
-    mask = prop.hamiltonian.potential(*space_vid.grid_points) if mask_potential else None
+    #mask = prop.hamiltonian.potential(*space_vid.grid_points) if mask_potential else None
 
     # Loop over batches of times and render frames
-    num_batches = len(times) // batch_size
-    times_split = np.array_split(times, num_batches)
-    norm_factor = None
-    for i, batch in enumerate(times_split):
-        print(f"\rGenerating time-dependent wave function. Batch {i + 1} of {len(times_split)}", end='')
-        psit = prop.evolve(batch)
-
+    i = 0
+    t = 0.
+    while t<=duration:
         # prepare the probabilities and phases
-        probt = (p:=np.abs(psit)**2)/p.max(axis=(1,2), keepdims=True)
-        norm_factor = probt.max()*rescaling_factor if norm_factor is None else norm_factor
-        #probt /= norm_factor
-        if (p_clip:=np.max(probt))>1:
-            print(f"Warning: clipping detect with value {p_clip} > 1. Consider rescaling.")
-        phit = np.angle(psit)
+        psi = next(psit_gen)
+        frame = prep_frame(psi, mask_grid=mask_grid, size=video_size)
+        frame_queue.put(frame)
 
-        # Use generator to feed frames into frame queue
-        frames = gen_colorized_frames(probt, phit, mask_grid=mask, size=video_size, write_interval=write_interval)
-        for j, f in enumerate(frames):
-            frame_queue.put(f)
+        t += 1 / fps
+        i += 1
 
-            # alert the user if the frame has an invalid configuration
-            if f.min()<0 or f.max()>255 or \
-                    f.shape!=(*video_size, 3) or \
-                    f.dtype != np.uint8:
-                raise Exception("Invalid frame!")
+        if i % progress_interval == 0:
+            print(f"\rProcessed up to time {t:0.2f} of {duration}. {t/duration:0.1%} complete.", end='')
 
 
-def gen_colorized_frames(probs, phis, mask_grid=None, size=None, write_interval=None):
-    for i in range(0,len(probs), write_interval):
-        frame = hsv_rep_color(probs[i], phis[i])
-        frame = (255 * frame).astype(np.uint8)
-        frame = frame[..., ::-1]  # bgr channel ordering for opencv
+def prep_frame(psi, mask_grid=None, size=None):
+    prob = (p := np.abs(psi) ** 2) / p.max()
+    if (p_clip := np.max(prob)) > 1:
+        print(f"Warning: clipping detect with value {p_clip} > 1. Consider rescaling.")
+    phi = np.angle(psi)
 
-        # optionally resize
-        if size:
-            frame = cv2.resize(frame, size, interpolation=cv2.INTER_LANCZOS4)
+    frame = hsv_rep_color(prob, phi)
+    frame = (255 * frame).astype(np.uint8)
+    frame = frame[..., ::-1]  # bgr channel ordering for opencv
 
-        # optionally mask the mask_func
-        if mask_grid is not None:
-            frame[mask_grid > 0] = np.array([128, 128, 128], dtype=np.uint8)
+    # optionally resize
+    if size:
+        frame = cv2.resize(frame, size, interpolation=cv2.INTER_LANCZOS4)
 
-        yield frame
+    # optionally mask the mask_func
+    if mask_grid is not None:
+        frame[mask_grid > 0] = np.array([128, 128, 128], dtype=np.uint8)
+
+    # alert the user if the frame has an invalid configuration
+    if frame.min() < 0 or frame.max() > 255 or \
+            frame.shape != (*size, 3) or \
+            frame.dtype != np.uint8:
+        raise Exception("Invalid frame!")
+
+    return frame
 
 
 class VideoWriterStream:
