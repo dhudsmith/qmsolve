@@ -4,8 +4,7 @@ from queue import Queue
 import numpy as np
 import cv2
 
-from hamiltonian import DiscreteSpace, SingleParticle, Solver
-from time_evolve import DiagonalizationPropagator as DiagProp
+from hamiltonian import DiscreteSpace, SingleParticle, Solver, Propagator
 from video_utils import VideoWriterStream, render_frames
 from potentials import multiple_hard_disks
 from states import coherent_state_2d
@@ -18,7 +17,7 @@ def main():
 
     # potential
     num_cols = 3
-    dot_radius = 1
+    dot_radius = 0.20
     step = 3*dot_radius
     ys = np.arange(-7,7, step)
     centers = [(3+i*step, y+i%2*step/2) for i in range(num_cols) for y in ys]
@@ -35,16 +34,16 @@ def main():
     # system and solver
     dim = 2  # spacial dimension
     support = (-6, 6)  # support region of mask_func
-    grid = 60  # number of grid points along one dimension. Assumed square.
+    grid = 200  # number of grid points along one dimension. Assumed square.
     dtype = np.float64  # datatype used for internal processing
-    num_states = 500  # how many eigenstates to consider for time evolution
+    num_states = 900  # how many eigenstates to consider for time evolution
     method = 'eigsh'  # eigensolver method. One of 'eigsh' or 'lobpcg'
 
     # video arguments
     name = 'scattering_staggered_grid'
     rescaling_factor = 1
     fps = 30
-    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 8, 12 * fps)])
+    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 1.5, 12 * fps)])
     batch_size = fps
     grid_video = 1080
     video_size = (grid_video, grid_video)
@@ -60,7 +59,7 @@ def main():
     space_vid = DiscreteSpace(dim, support, grid_video, dtype)
     ham = SingleParticle(space, potential)
     solver = Solver(method=method)
-    prop = DiagProp(ham, init_state, solver, num_states)
+    prop = Propagator(ham, init_state, solver, num_states)
 
     # ------------------------
     # Run simulation and create outputs
