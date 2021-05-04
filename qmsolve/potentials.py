@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Tuple
 
 
-def hard_disk(x, y, r=1.0, center=(0, 0), scale=1e5):
+def hard_disk(x, y, r=1.0, center=(0, 0), scale=100):
     """
     A circular barrier
     """
@@ -25,13 +25,13 @@ def multiple_hard_disks(x, y, rs: List[float], centers: List[Tuple[float, float]
     return v
 
 
-def gravity_and_floor(x, y, floor, g=1, scale=1e5):
+def gravity_and_floor(x, y, floor, g=1, scale=100):
     """
     A hard wall at the bottom of the view and a linear downward potential.
     Note: y increases in the downward direction.
     """
     v = np.zeros((len(y), len(x)))
-    v += g*(y[:,None]-floor)**2
+    v += g*np.abs(y[:,None]-floor)
     v[y>floor] = scale
     return v
 

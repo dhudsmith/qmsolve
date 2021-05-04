@@ -7,7 +7,7 @@ import cv2
 from hamiltonian import DiscreteSpace, SingleParticle
 from time_evolve import VisscherPropagator as VissProp
 from video_utils import VideoWriterStream, render_frames
-from potentials import multiple_hard_disks
+from potentials import gravity_and_floor
 from states import coherent_state_2d
 
 
@@ -17,19 +17,14 @@ def main():
     # ------------------------
 
     # potential
-    num_cols = 5
-    dot_radius = 0.20
-    step = 3 * dot_radius
-    ys = np.arange(-7, 7, step)
-    centers = [(3 + i * step, y + i % 2 * step / 2) for i in range(num_cols) for y in ys]
-    rs = [dot_radius] * (len(centers))
-    potential = partial(multiple_hard_disks, rs=rs, centers=centers)
+    floor = 4
+    grav = 3
+    potential = partial(gravity_and_floor, floor=floor, g=grav)
 
     # initial state
-    lam = dot_radius
-    p = (1.6/lam, 0)
-    xy0 = (-4, 0)
-    w = (1, 1)
+    p = (1, 0)
+    xy0 = (-3, -1)
+    w = (0.5, 0.5)
     init_state = partial(coherent_state_2d, p=p, xy0=xy0, w=w)
 
     # system and solver
@@ -38,11 +33,11 @@ def main():
     grid = 300 # number of grid points along one dimension. Assumed square.
     dtype = np.float32  # datatype used for internal processing
     dt = 0.0001
-    sys_duration = 2
+    sys_duration = 10
 
     # video arguments
-    name = 'visscher_prop'
-    vid_duration = 6
+    name = 'bouncing_ball'
+    vid_duration = 15
     fps = 30
     sample_interval = int(sys_duration / vid_duration / dt / fps)
     grid_video = 720
@@ -61,7 +56,11 @@ def main():
     prop = VissProp(ham, init_state)
 
     psit_gen = prop.evolve(dt, sample_interval)
-    mask_grid = ham.potential(*space_vid.grid_points)
+
+    # mask out just the floor
+    mask_grid = np.zeros(space_vid.grid)
+    ys = space_vid.grid_points[1]
+    mask_grid[ys>floor]=1
 
     # ------------------------
     # Run simulation and create outputs

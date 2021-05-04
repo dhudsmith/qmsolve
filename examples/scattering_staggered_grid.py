@@ -4,7 +4,8 @@ from queue import Queue
 import numpy as np
 import cv2
 
-from hamiltonian import DiscreteSpace, SingleParticle, Solver, Propagator
+from hamiltonian import DiscreteSpace, SingleParticle
+from time_evolve import VisscherPropagator as VissProp
 from video_utils import VideoWriterStream, render_frames
 from potentials import multiple_hard_disks
 from states import coherent_state_2d
@@ -16,17 +17,17 @@ def main():
     # ------------------------
 
     # potential
-    num_cols = 3
+    num_cols = 5
     dot_radius = 0.20
-    step = 3*dot_radius
-    ys = np.arange(-7,7, step)
-    centers = [(3+i*step, y+i%2*step/2) for i in range(num_cols) for y in ys]
+    step = 3 * dot_radius
+    ys = np.arange(-7, 7, step)
+    centers = [(3 + i * step, y + i % 2 * step / 2) for i in range(num_cols) for y in ys]
     rs = [dot_radius] * (len(centers))
     potential = partial(multiple_hard_disks, rs=rs, centers=centers)
 
     # initial state
-    lam = dot_radius/2.8
-    p = (2*np.pi/lam, 0)
+    lam = dot_radius
+    p = (1.6/lam, 0)
     xy0 = (-4, 0)
     w = (1, 1)
     init_state = partial(coherent_state_2d, p=p, xy0=xy0, w=w)
@@ -34,18 +35,17 @@ def main():
     # system and solver
     dim = 2  # spacial dimension
     support = (-6, 6)  # support region of mask_func
-    grid = 200  # number of grid points along one dimension. Assumed square.
-    dtype = np.float64  # datatype used for internal processing
-    num_states = 900  # how many eigenstates to consider for time evolution
-    method = 'eigsh'  # eigensolver method. One of 'eigsh' or 'lobpcg'
+    grid = 300 # number of grid points along one dimension. Assumed square.
+    dtype = np.float32  # datatype used for internal processing
+    dt = 0.0001
+    sys_duration = 2
 
     # video arguments
-    name = 'scattering_staggered_grid'
-    rescaling_factor = 1
+    name = 'visscher_prop'
+    vid_duration = 6
     fps = 30
-    times = np.concatenate([np.zeros(1 * fps), np.linspace(0, 1.5, 12 * fps)])
-    batch_size = fps
-    grid_video = 1080
+    sample_interval = int(sys_duration / vid_duration / dt / fps)
+    grid_video = 720
     video_size = (grid_video, grid_video)
     fourcc_str = 'mp4v'
     extension = 'mp4'
@@ -58,8 +58,10 @@ def main():
     space = DiscreteSpace(dim, support, grid, dtype)
     space_vid = DiscreteSpace(dim, support, grid_video, dtype)
     ham = SingleParticle(space, potential)
-    solver = Solver(method=method)
-    prop = Propagator(ham, init_state, solver, num_states)
+    prop = VissProp(ham, init_state)
+
+    psit_gen = prop.evolve(dt, sample_interval)
+    mask_grid = ham.potential(*space_vid.grid_points)
 
     # ------------------------
     # Run simulation and create outputs
@@ -77,7 +79,7 @@ def main():
     thread = vws.start()
 
     # render the frames to the write_queue
-    render_frames(write_queue, times, batch_size, prop, space_vid, rescaling_factor)
+    render_frames(write_queue, psit_gen, vid_duration, fps, space_vid, mask_grid=mask_grid)
 
     # shutdown the thread
     vws.stop()
