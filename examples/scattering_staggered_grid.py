@@ -35,9 +35,9 @@ def main():
     # system and solver
     dim = 2  # spacial dimension
     support = (-6, 6)  # support region of mask_func
-    grid = 300 # number of grid points along one dimension. Assumed square.
+    grid = 100 # number of grid points along one dimension. Assumed square.
     dtype = np.float32  # datatype used for internal processing
-    dt = 0.0001
+    dt = 0.001
     sys_duration = 2
 
     # video arguments
@@ -58,9 +58,9 @@ def main():
     space = DiscreteSpace(dim, support, grid, dtype)
     space_vid = DiscreteSpace(dim, support, grid_video, dtype)
     ham = SingleParticle(space, potential)
-    prop = VissProp(ham, init_state)
+    prop = VissProp(ham, init_state, dt, sample_interval)
 
-    psit_gen = prop.evolve(dt, sample_interval)
+    psit_gen = prop.evolve()
     mask_grid = ham.potential(*space_vid.grid_points)
 
     # ------------------------
