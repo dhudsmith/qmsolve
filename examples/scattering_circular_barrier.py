@@ -55,9 +55,9 @@ def main():
     space_vid = DiscreteSpace(dim, support, grid_video, dtype)
     ham = SingleParticle(space, potential)
     solver = Solver(method=method)
-    prop = DiagProp(ham, init_state, solver, num_states)
+    prop = DiagProp(ham, init_state, dt, solver, num_states)
 
-    psit_gen = prop.evolve(dt)
+    psit_gen = prop.evolve()
 
     # mask out the potential region
     mask_grid = potential(*space_vid.grid_points)
