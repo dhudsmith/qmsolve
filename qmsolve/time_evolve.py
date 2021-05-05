@@ -55,24 +55,30 @@ class VisscherPropagator(Propagator):
             R, I = Rnext, Inext
             step_num += 1
 
-# TODO: adapt to new base class interface
-# class DiagonalizationPropagator(Propagator):
-#     def __init__(self, hamiltonian: Hamiltonian, init_state: Callable[[np.ndarray], np.ndarray], solver: Solver,
-#                  k: int):
-#         super().__init__(hamiltonian, init_state)
-#
-#         self.solver = solver
-#         self.k = k
-#         self.eigs, self.vecs = self.solver.eigsys(self.hamiltonian, self.k)
-#
-#     def evolve(self, times: np.ndarray) -> np.ndarray:
-#         # compute the time-dependent wave function
-#         coeffs = self.vecs @ self.init_state_grid.T
-#         phases = np.exp(-1.0j * np.outer(times, self.eigs))
-#         coeffs_of_t = phases * coeffs.T
-#         psi_of_t = coeffs_of_t @ self.vecs
-#
-#         # re-ravel the state vector to a mesh
-#         psi_of_t = self.hamiltonian.space.vec_to_mesh(psi_of_t)
-#
-#         return psi_of_t
+
+class DiagonalizationPropagator(Propagator):
+    def __init__(self, hamiltonian: Hamiltonian, init_state: Callable[[np.ndarray], np.ndarray], solver: Solver,
+                 k: int):
+        super().__init__(hamiltonian, init_state)
+
+        self.solver = solver
+        self.k = k
+        self.eigs, self.vecs = self.solver.eigsys(self.hamiltonian, self.k)
+
+    def evolve(self, dt: float, sample_interval: int = 1) -> Generator[np.ndarray, None, None]:
+        # compute the time-dependent wave function
+        coeffs = self.vecs @ self.init_state_grid.T
+
+        # loop over time
+        step_num = 0
+        t = 0
+        while True:
+            phase_t = np.exp(-1.0j * t * self.eigs)
+            psi_of_t = phase_t * coeffs.T @ self.vecs
+
+            if step_num % sample_interval == 0:
+                psi_of_t = self.hamiltonian.space.vec_to_mesh(psi_of_t)
+                yield psi_of_t.squeeze()
+
+            step_num += 1
+            t+=dt
