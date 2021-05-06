@@ -31,7 +31,7 @@ potential = lambda x, y, z: 1/2 * (x[None, None]**2 +
                                    z[:, None, None]**2)
 
 # setup the space, hamiltonian, and solver
-# use the lobpcg this time for faster convergence
+# use the lobpcg solver this time for faster convergence
 space = DiscreteSpace(dim=3, support=(-10,10), grid=50)
 hamil = SingleParticle(space, potential)
 solver = Solver(method="lobpcg")
